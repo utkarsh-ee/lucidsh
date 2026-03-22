@@ -5,6 +5,8 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <limits.h>
+#include <linux/limits.h>
 
 #define MAX_ARGS 64
 #define DELIM " \t\r\n\a"
@@ -29,13 +31,18 @@ void parse_to_argv(char *line, char *argv[])
 
 int main()
 {
+
+
 	while(1)
-	{
+	{	
+		char cwd[PATH_MAX]; // Declare a buffer large enough for most paths
 		char line[1025];
 		char *argv[MAX_ARGS];
 		char *home_path_value = getenv("HOME");
 
-		printf("lucidsh > ");
+		getcwd(cwd, sizeof(cwd));
+	
+		printf("lucidsh: %s > ", cwd);
 		fflush(stdout);
 
 		if (fgets(line, sizeof(line), stdin) == NULL)
