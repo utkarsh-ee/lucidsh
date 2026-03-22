@@ -1,0 +1,8 @@
+# compiled binary
+lucidsh
+
+# object files
+*.o
+
+# backup files
+*~
