@@ -4,7 +4,7 @@ TARGET = lucidsh
 
 all: $(TARGET)
 
-$(TARGET): main.c template.c
+$(TARGET): shell.c template.c
 	$(CC) $(CFLAGS) $^ -o $(TARGET)
 
 clean:
