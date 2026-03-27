@@ -5,114 +5,96 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <limits.h>
-#include <linux/limits.h>
+#include "template.h" 
 
 #define MAX_ARGS 64
 #define DELIM " \t\r\n\a"
 
-
 void parse_to_argv(char *line, char *argv[])
 {
-	char *saveptr;
-	int i = 0;
+    char *saveptr;
+    int i = 0;
 
-	char *token = strtok_r(line, DELIM, &saveptr);
+    char *token = strtok_r(line, DELIM, &saveptr);
 
-	while (token != NULL && i < MAX_ARGS - 1)
-	{
-		argv[i++] = token;
-		token = strtok_r(NULL, DELIM, &saveptr);
-	}
+    while (token != NULL && i < MAX_ARGS - 1)
+    {
+        argv[i++] = token;
+        token = strtok_r(NULL, DELIM, &saveptr);
+    }
 
-	argv[i] = NULL;
+    argv[i] = NULL;
 }
-
 
 int main()
 {
+    print_banner(1);
+    while (1)
+    {   
+        char line[1025];
+        char *argv[MAX_ARGS];
+        char *home_path_value = getenv("HOME");
 
+        print_prompt(); 
 
-	while(1)
-	{	
-		char cwd[PATH_MAX]; // Declare a buffer large enough for most paths
-		char line[1025];
-		char *argv[MAX_ARGS];
-		char *home_path_value = getenv("HOME");
+        if (fgets(line, sizeof(line), stdin) == NULL)
+        {
+            printf("\n");
+            break; 
+        }
 
-		getcwd(cwd, sizeof(cwd));
-	
-		printf("lucidsh: %s > ", cwd);
-		fflush(stdout);
+        parse_to_argv(line, argv);
 
-		if (fgets(line, sizeof(line), stdin) == NULL)
-		{
-			perror("fgets failed");
-			exit(1);
-		}
+        if (argv[0] == NULL)
+            continue;
 
-		parse_to_argv(line, argv);
+        if (strcmp(argv[0], "exit") == 0)
+            exit(0);
 
-		if (argv[0] == NULL)
-			continue;
-	
+        if (strcmp(argv[0], "cd") == 0)
+        {
+            if (argv[1] == NULL)
+            {
+                if (home_path_value == NULL)
+                {
+                    printf("HOME not set\n");
+                }
+                else if (chdir(home_path_value) == -1)
+                {
+                    perror("chdir failed");
+                }
+            }
+            else
+            {
+                if (chdir(argv[1]) == -1)
+                {
+                    perror("chdir failed");
+                }
+            }
+            continue;
+        }
 
-		if (strcmp(argv[0], "exit") == 0)
-			exit(0);
+        pid_t pid = fork();
 
-		if(strcmp(argv[0], "cd") == 0)
-		{
-			if (argv[1] == NULL)
-			{
-				if (home_path_value == NULL)
-				{
-					printf("Home not set\n");
-				}
-				
-				else if (chdir(home_path_value) == -1)
-				{
-					printf("chdir failed");
-				}
-			}
-			else
-			{
-				if (chdir(argv[1]) == -1)
-				{
-					perror("chdir failed");
-					
-				}
-			}
-			continue;
-		}
+        if (pid < 0)
+        {
+            perror("Fork Fail");
+            exit(1);
+        }
+        else if (pid == 0)
+        {
+            if (execvp(argv[0], argv) == -1)
+            {
+                perror("execvp failed");
+                exit(1);
+            }
+        }
+        else
+        {
+            int status;
+            waitpid(pid, &status, 0);
+        }
+    }
 
-
-
-		
-
-	pid_t pid = fork();
-
-		if (pid < 0)
-		{
-			perror("Fork Fail");
-			exit(1);
-		}
-
-		else if (pid == 0)
-		{
-			//Child Process
-			if ((execvp(argv[0], argv)) == -1)
-			{
-				perror("execvp failed");
-				exit(1);
-			}
-		} 
-		
-		else
-		{
-			//Parent Process
-			int status;
-			waitpid(pid, &status, 0);
-		}
-	}
-	return 0;
+    return 0;
 }
